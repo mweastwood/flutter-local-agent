@@ -1,15 +1,95 @@
 # local_agent
 
-A new Flutter plugin project.
+A Flutter plugin for running on-device, local AI reasoning and drawing loops using a ReAct (Reasoning and Action) execution harness.
+
+Under the hood, it leverages **Google ML Kit GenAI** on Android and experimental **Chrome Built-in AI** (`window.chromeAi`) on the Web, with a mock fallback for testing and other platforms.
+
+---
+
+## Features
+- **On-Device Inference:** Run prompts locally without external API keys or server costs.
+- **ReAct Loop Orchestration:** Implements an iterative reasoning-action loop via `AgentHarness` that queries the model, executes tool calls in the application environment, feeds back the result, and loops until finished.
+- **Multiplatform Support:** Runs on Android (Android 8.0+ / API 26+) and Web (Chrome Dev/Canary with Gemini Nano enabled).
+- **CI/CD Integrated:** Automated GitHub Actions workflows verifying formatting, static analysis, unit/widget tests, and build compilation.
+
+---
+
+## Platform Requirements
+
+### Android
+- **Minimum SDK Version:** 26 (Android 8.0 Oreo). This is required due to the `com.google.mlkit:genai-prompt` dependency.
+- Setting up the model download: The plugin uses ML Kit’s GenAI feature which handles local model weight downloads and management on-device.
+
+### Web
+- Requires experimental Chrome Built-in AI (`chromeAi`) enabled on the client browser.
+- Ensure that the browser has Gemini Nano enabled and configured.
+
+---
 
 ## Getting Started
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/to/develop-plugins),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+### 1. Define your Agent Delegate
+To customize how your agent interacts with the Flutter environment, implement the `AgentDelegate` class. This defines how the prompt history is formatted, provides visual context (images), and executes the tool commands output by the model.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```dart
+import 'dart:typed_data';
+import 'package:local_agent/local_agent.dart';
 
+class MyDrawingAgentDelegate implements AgentDelegate {
+  @override
+  String formatPrompt(String userPrompt, List<AgentStepResult> history) {
+    final buffer = StringBuffer("Prompt: $userPrompt\nHistory:\n");
+    for (var step in history) {
+      buffer.writeln("- Tool: ${step.tool}, Feedback: ${step.feedback}");
+    }
+    return buffer.toString();
+  }
+
+  @override
+  Uint8List? getVisualInput() {
+    // Return image bytes of the current drawing canvas for multimodal support
+    return null; 
+  }
+
+  @override
+  Future<String> applyAction(Map<String, dynamic> actionMap) async {
+    // Parse the action parameters and update your app environment (e.g., draw a line)
+    final tool = actionMap['tool'];
+    final params = actionMap['params'];
+    return "Successfully executed $tool with parameters $params";
+  }
+
+  @override
+  bool isFinishAction(Map<String, dynamic> actionMap) {
+    return actionMap['tool'] == 'finish';
+  }
+}
+```
+
+### 2. Run the Loop with AgentHarness
+Initialize the `AgentHarness` with an `AiService` (e.g., using `MockAiService` for testing or the production `aiServiceProvider` for method channel / web integration) and your delegate. Then start the loop:
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:local_agent/local_agent.dart';
+
+void startAgent(WidgetRef ref) async {
+  final aiService = ref.read(aiServiceProvider);
+  final delegate = MyDrawingAgentDelegate();
+  
+  final harness = AgentHarness(
+    aiService: aiService,
+    delegate: delegate,
+  );
+
+  final results = await harness.runDrawingLoop(
+    userPrompt: "Draw a red circle at center",
+    maxSteps: 5,
+    onStep: (stepResult, currentStep) {
+      print("Step $currentStep thought: ${stepResult.thought}");
+    },
+  );
+  
+  print("Agent finished execution after ${results.length} steps.");
+}
+```
