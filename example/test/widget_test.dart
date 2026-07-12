@@ -15,11 +15,11 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
 
-    // Verify that platform version is retrieved.
+    // Verify that AI Core status is retrieved.
     expect(
       find.byWidgetPredicate(
         (Widget widget) =>
-            widget is Text && widget.data!.startsWith('Running on:'),
+            widget is Text && widget.data!.startsWith('AI Core Status:'),
       ),
       findsOneWidget,
     );
