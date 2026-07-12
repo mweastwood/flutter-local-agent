@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'ai_service_stub.dart' if (dart.library.html) 'ai_service_web.dart';
-export 'ai_service_stub.dart' if (dart.library.html) 'ai_service_web.dart';
 
 enum AiCoreStatus { unavailable, downloadable, downloading, available }
 
@@ -146,11 +145,13 @@ class MockAiService implements AiService {
   }
 }
 
-final aiServiceProvider = Provider<AiService>((ref) {
+AiService getAiService() {
   if (kIsWeb) {
     return getWebAiService();
   } else if (defaultTargetPlatform == TargetPlatform.android) {
     return MethodChannelAiService();
   }
   return MockAiService();
-});
+}
+
+final aiServiceProvider = Provider<AiService>((ref) => getAiService());
