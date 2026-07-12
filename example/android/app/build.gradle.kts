@@ -19,7 +19,8 @@ android {
         applicationId = "com.mweastwood.local_agent_example"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 26
+        // The local_agent plugin requires minSdk 26 due to its on-device ML Kit dependency.
+        minSdk = maxOf(flutter.minSdkVersion, 26)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
