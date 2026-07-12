@@ -93,14 +93,3 @@ void startAgent(WidgetRef ref) async {
   print("Agent finished execution after ${results.length} steps.");
 }
 ```
-
----
-
-## Scripts & Tools
-- **Release Tagger:** The project includes a utility script under `bin/tag.sh` to automate semantic version increments and pushes to the git remote:
-  ```bash
-  ./bin/tag.sh --patch # Increments patch version (e.g., v0.0.1 -> v0.0.2)
-  ./bin/tag.sh --minor # Increments minor version (e.g., v0.0.1 -> v0.1.0)
-  ./bin/tag.sh --major # Increments major version (e.g., v0.0.1 -> v1.0.0)
-  ```
-  Run `./bin/tag.sh --help` for full options.
