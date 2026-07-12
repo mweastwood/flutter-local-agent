@@ -36,11 +36,11 @@ jobs:
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Analyze plugin source
-        run: flutter analyze
+        run: flutter analyze --fatal-infos
 
       - name: Analyze example source
         working-directory: ./example
-        run: flutter analyze
+        run: flutter analyze --fatal-infos
 
       - name: Run plugin tests
         run: flutter test
@@ -48,3 +48,11 @@ jobs:
       - name: Run example tests
         working-directory: ./example
         run: flutter test
+
+      - name: Build Web (example)
+        working-directory: ./example
+        run: flutter build web
+
+      - name: Build Android APK (example)
+        working-directory: ./example
+        run: flutter build apk --debug
