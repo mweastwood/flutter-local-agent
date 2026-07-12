@@ -145,11 +145,13 @@ class MockAiService implements AiService {
   }
 }
 
-final aiServiceProvider = Provider<AiService>((ref) {
+AiService getAiService() {
   if (kIsWeb) {
     return getWebAiService();
   } else if (defaultTargetPlatform == TargetPlatform.android) {
     return MethodChannelAiService();
   }
   return MockAiService();
-});
+}
+
+final aiServiceProvider = Provider<AiService>((ref) => getAiService());
