@@ -51,7 +51,7 @@ jobs:
 
       - name: Build Web (example)
         working-directory: ./example
-        run: flutter build web
+        run: flutter build web --wasm
 
       - name: Build Android APK (example)
         working-directory: ./example
