@@ -69,15 +69,13 @@ class MethodChannelAiService implements AiService {
 
       for (int attempt = 1; attempt <= 4; attempt++) {
         try {
-          resultString = await _channel.invokeMethod<String>(
-            'generateContent',
-            {
-              'prompt': prompt,
-              'image': imageBytes,
-              'temperature': temperature,
-              'maxOutputTokens': maxOutputTokens,
-            },
-          );
+          resultString = await _channel
+              .invokeMethod<String>('generateContent', {
+                'prompt': prompt,
+                'image': imageBytes,
+                'temperature': temperature,
+                'maxOutputTokens': maxOutputTokens,
+              });
           break; // Success! Exit the retry loop.
         } catch (e, stack) {
           lastError = e;
