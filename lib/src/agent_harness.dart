@@ -198,8 +198,12 @@ class AgentHistoryEntry {
       prompt: json['prompt'] as String,
       response: json['response'] as String,
       isError: json['isError'] as bool? ?? false,
-      imageBytes: imageMap != null ? base64Decode(imageMap['base64'] as String) : null,
-      imageMimeType: imageMap != null ? (imageMap['mimeType'] as String? ?? 'image/bmp') : 'image/bmp',
+      imageBytes: imageMap != null
+          ? base64Decode(imageMap['base64'] as String)
+          : null,
+      imageMimeType: imageMap != null
+          ? (imageMap['mimeType'] as String? ?? 'image/bmp')
+          : 'image/bmp',
     );
   }
 
