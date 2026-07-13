@@ -70,7 +70,10 @@ class LocalAgentPlugin : FlutterPlugin, MethodCallHandler {
                 val promptText = call.argument<String>("prompt")
                 val imageBytes = call.argument<ByteArray>("image")
                 val temperature = call.argument<Double>("temperature")?.toFloat() ?: 0.7f
-                val maxOutputTokens = call.argument<Int>("maxOutputTokens") ?: 1024
+                // The ML Kit GenAI Prompt API for on-device Gemini Nano enforces that maxOutputTokens
+                // must be between 1 and 256. Values outside this range will trigger an exception on device.
+                // We default to 256 if unspecified, and coerce any provided value to this range.
+                val maxOutputTokens = call.argument<Int>("maxOutputTokens")?.coerceIn(1, 256) ?: 256
 
                 if (promptText == null) {
                     result.error("invalid_argument", "prompt is missing", null)
