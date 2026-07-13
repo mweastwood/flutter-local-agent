@@ -70,7 +70,7 @@ class LocalAgentPlugin : FlutterPlugin, MethodCallHandler {
                 val promptText = call.argument<String>("prompt")
                 val imageBytes = call.argument<ByteArray>("image")
                 val temperature = call.argument<Double>("temperature")?.toFloat() ?: 0.7f
-                val maxOutputTokens = call.argument<Int>("maxOutputTokens") ?: 1024
+                val maxOutputTokens = call.argument<Int>("maxOutputTokens")?.coerceIn(1, 256) ?: 256
 
                 if (promptText == null) {
                     result.error("invalid_argument", "prompt is missing", null)
