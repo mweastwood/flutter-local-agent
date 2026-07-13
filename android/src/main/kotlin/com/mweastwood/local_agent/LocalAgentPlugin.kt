@@ -70,6 +70,7 @@ class LocalAgentPlugin : FlutterPlugin, MethodCallHandler {
                 val promptText = call.argument<String>("prompt")
                 val imageBytes = call.argument<ByteArray>("image")
                 val temperature = call.argument<Double>("temperature")?.toFloat() ?: 0.7f
+                val maxOutputTokens = call.argument<Int>("maxOutputTokens") ?: 1024
 
                 if (promptText == null) {
                     result.error("invalid_argument", "prompt is missing", null)
@@ -89,12 +90,14 @@ class LocalAgentPlugin : FlutterPlugin, MethodCallHandler {
                             model.generateContent(
                                 generateContentRequest(ImagePart(bitmap), TextPart(promptText)) {
                                     this.temperature = temperature
+                                    this.maxOutputTokens = maxOutputTokens
                                 }
                             )
                         } else {
                             model.generateContent(
                                 generateContentRequest(TextPart(promptText)) {
                                     this.temperature = temperature
+                                    this.maxOutputTokens = maxOutputTokens
                                 }
                             )
                         }

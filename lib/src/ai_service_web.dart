@@ -65,6 +65,7 @@ class WebAiService implements AiService {
     required String prompt,
     Uint8List? imageBytes,
     bool lowTemperature = false,
+    int? maxOutputTokens,
   }) async {
     try {
       final ai = chromeAi;

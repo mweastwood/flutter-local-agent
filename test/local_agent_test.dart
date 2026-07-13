@@ -21,6 +21,7 @@ class MockAiService implements AiService {
     required String prompt,
     Uint8List? imageBytes,
     bool lowTemperature = false,
+    int? maxOutputTokens,
   }) async {
     capturedPrompts.add(prompt);
     if (callCount < responses.length) {
