@@ -14,6 +14,7 @@ abstract class AiService {
     required String prompt,
     Uint8List? imageBytes,
     bool lowTemperature = false,
+    double? temperature,
     int? maxOutputTokens,
   });
 }
@@ -57,6 +58,7 @@ class MethodChannelAiService implements AiService {
     required String prompt,
     Uint8List? imageBytes,
     bool lowTemperature = false,
+    double? temperature,
     int? maxOutputTokens,
   }) async {
     try {
@@ -65,7 +67,7 @@ class MethodChannelAiService implements AiService {
       StackTrace? lastStackTrace;
       final List<String> attemptErrors = [];
 
-      final double temperature = lowTemperature ? 0.5 : 0.7;
+      final double tempVal = temperature ?? (lowTemperature ? 0.5 : 0.7);
 
       for (int attempt = 1; attempt <= 4; attempt++) {
         try {
@@ -73,7 +75,7 @@ class MethodChannelAiService implements AiService {
               .invokeMethod<String>('generateContent', {
                 'prompt': prompt,
                 'image': imageBytes,
-                'temperature': temperature,
+                'temperature': tempVal,
                 'maxOutputTokens': maxOutputTokens,
               });
           break; // Success! Exit the retry loop.
@@ -135,6 +137,7 @@ class MockAiService implements AiService {
     required String prompt,
     Uint8List? imageBytes,
     bool lowTemperature = false,
+    double? temperature,
     int? maxOutputTokens,
   }) async {
     await Future.delayed(const Duration(milliseconds: 600));
