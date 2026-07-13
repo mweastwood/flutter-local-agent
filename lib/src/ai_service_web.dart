@@ -64,14 +64,14 @@ class WebAiService implements AiService {
   Future<String?> generateContent({
     required String prompt,
     Uint8List? imageBytes,
-    bool lowTemperature = false,
+    double temperature = 1.0,
     int? maxOutputTokens,
   }) async {
     try {
       final ai = chromeAi;
       if (ai == null) return null;
 
-      if (lowTemperature) {
+      if (temperature <= 0.5) {
         // Fallback for suggesting exactly 16 hex color strings on web
         await Future.delayed(const Duration(milliseconds: 500));
         final List<String> mockPalette = List.generate(16, (i) {

@@ -13,7 +13,7 @@ abstract class AiService {
   Future<String?> generateContent({
     required String prompt,
     Uint8List? imageBytes,
-    bool lowTemperature = false,
+    double temperature = 1.0,
     int? maxOutputTokens,
   });
 }
@@ -56,7 +56,7 @@ class MethodChannelAiService implements AiService {
   Future<String?> generateContent({
     required String prompt,
     Uint8List? imageBytes,
-    bool lowTemperature = false,
+    double temperature = 1.0,
     int? maxOutputTokens,
   }) async {
     try {
@@ -64,8 +64,6 @@ class MethodChannelAiService implements AiService {
       dynamic lastError;
       StackTrace? lastStackTrace;
       final List<String> attemptErrors = [];
-
-      final double temperature = lowTemperature ? 0.5 : 0.7;
 
       for (int attempt = 1; attempt <= 4; attempt++) {
         try {
@@ -134,12 +132,12 @@ class MockAiService implements AiService {
   Future<String?> generateContent({
     required String prompt,
     Uint8List? imageBytes,
-    bool lowTemperature = false,
+    double temperature = 1.0,
     int? maxOutputTokens,
   }) async {
     await Future.delayed(const Duration(milliseconds: 600));
 
-    if (lowTemperature) {
+    if (temperature <= 0.5) {
       return '["#000000", "#ffffff"]';
     }
 
