@@ -64,7 +64,7 @@ class WebAiService implements AiService {
   Future<String?> generateContent({
     required String prompt,
     Uint8List? imageBytes,
-    double temperature = 0.7,
+    double temperature = 1.0,
     int? maxOutputTokens,
   }) async {
     try {
