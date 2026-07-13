@@ -20,8 +20,7 @@ class MockAiService implements AiService {
   Future<String?> generateContent({
     required String prompt,
     Uint8List? imageBytes,
-    bool lowTemperature = false,
-    double? temperature,
+    double temperature = 0.7,
     int? maxOutputTokens,
   }) async {
     capturedPrompts.add(prompt);
