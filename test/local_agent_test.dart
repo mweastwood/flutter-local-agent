@@ -114,4 +114,50 @@ void main() {
       expect(delegate.actionsApplied, equals(['increment', 'increment']));
     });
   });
+
+  group('AgentHistoryEntry Serialization Tests', () {
+    test('toJson and fromJson work correctly with and without image', () {
+      final timestamp = DateTime(2026, 7, 12, 12, 0, 0);
+      final entry = AgentHistoryEntry(
+        timestamp: timestamp,
+        prompt: 'test prompt',
+        response: 'test response',
+        isError: false,
+        imageBytes: Uint8List.fromList([1, 2, 3]),
+      );
+
+      final jsonMap = entry.toJson();
+      expect(jsonMap['timestamp'], equals(timestamp.toIso8601String()));
+      expect(jsonMap['prompt'], equals('test prompt'));
+      expect(jsonMap['response'], equals('test response'));
+      expect(jsonMap['isError'], isFalse);
+      expect(jsonMap['image']['mimeType'], equals('image/bmp'));
+      expect(jsonMap['image']['base64'], equals(base64Encode([1, 2, 3])));
+
+      final roundTrip = AgentHistoryEntry.fromJson(jsonMap);
+      expect(roundTrip.timestamp, equals(timestamp));
+      expect(roundTrip.prompt, equals('test prompt'));
+      expect(roundTrip.response, equals('test response'));
+      expect(roundTrip.isError, isFalse);
+      expect(roundTrip.imageBytes, equals(Uint8List.fromList([1, 2, 3])));
+      expect(roundTrip.imageMimeType, equals('image/bmp'));
+    });
+
+    test('serializeList formats valid JSON indent', () {
+      final timestamp = DateTime(2026, 7, 12, 12, 0, 0);
+      final entries = [
+        AgentHistoryEntry(
+          timestamp: timestamp,
+          prompt: 'prompt 1',
+          response: 'response 1',
+          isError: false,
+        ),
+      ];
+
+      final jsonStr = AgentHistoryEntry.serializeList(entries);
+      expect(jsonStr, contains('"prompt": "prompt 1"'));
+      expect(jsonStr, contains('"response": "response 1"'));
+      expect(jsonStr, contains('"isError": false'));
+    });
+  });
 }

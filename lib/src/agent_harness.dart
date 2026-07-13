@@ -159,3 +159,56 @@ class AgentHarness {
     return results;
   }
 }
+
+class AgentHistoryEntry {
+  final DateTime timestamp;
+  final String prompt;
+  final String response;
+  final bool isError;
+  final Uint8List? imageBytes;
+  final String imageMimeType;
+
+  AgentHistoryEntry({
+    required this.timestamp,
+    required this.prompt,
+    required this.response,
+    required this.isError,
+    this.imageBytes,
+    this.imageMimeType = 'image/bmp',
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'timestamp': timestamp.toIso8601String(),
+      'prompt': prompt,
+      'response': response,
+      'isError': isError,
+      if (imageBytes != null)
+        'image': {
+          'mimeType': imageMimeType,
+          'base64': base64Encode(imageBytes!),
+        },
+    };
+  }
+
+  factory AgentHistoryEntry.fromJson(Map<String, dynamic> json) {
+    final imageMap = json['image'] as Map<String, dynamic>?;
+    return AgentHistoryEntry(
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      prompt: json['prompt'] as String,
+      response: json['response'] as String,
+      isError: json['isError'] as bool? ?? false,
+      imageBytes: imageMap != null
+          ? base64Decode(imageMap['base64'] as String)
+          : null,
+      imageMimeType: imageMap != null
+          ? (imageMap['mimeType'] as String? ?? 'image/bmp')
+          : 'image/bmp',
+    );
+  }
+
+  static String serializeList(List<AgentHistoryEntry> entries) {
+    final list = entries.map((e) => e.toJson()).toList();
+    return const JsonEncoder.withIndent('  ').convert(list);
+  }
+}
