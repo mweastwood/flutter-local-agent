@@ -83,8 +83,12 @@ class MockTextAgentDelegate implements AgentDelegate<TestStepResult> {
   }
 
   @override
-  TestStepResult parseStepResult(Map<String, dynamic> actionMap, String feedback) {
-    final tool = actionMap['tool'] as String? ?? actionMap['action'] as String? ?? '';
+  TestStepResult parseStepResult(
+    Map<String, dynamic> actionMap,
+    String feedback,
+  ) {
+    final tool =
+        actionMap['tool'] as String? ?? actionMap['action'] as String? ?? '';
     return TestStepResult(
       tool: tool,
       feedback: feedback,
@@ -120,7 +124,10 @@ void main() {
         },
       ]);
       final delegate = MockTextAgentDelegate();
-      final harness = AgentHarness<TestStepResult>(aiService: mockAi, delegate: delegate);
+      final harness = AgentHarness<TestStepResult>(
+        aiService: mockAi,
+        delegate: delegate,
+      );
 
       final steps = await harness.runLoop(
         userPrompt: 'count to 2',
