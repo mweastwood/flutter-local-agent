@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -185,3 +186,33 @@ AiService getAiService() {
 }
 
 final aiServiceProvider = Provider<AiService>((ref) => getAiService());
+
+extension AiServiceJsonExtension on AiService {
+  /// Queries the model for a single-turn completion, strips markdown fence blocks,
+  /// and parses the response into a JSON Map or List.
+  Future<dynamic> generateJson({
+    required String prompt,
+    Uint8List? imageBytes,
+    double temperature = 1.0,
+  }) async {
+    final raw = await generateContent(
+      prompt: prompt,
+      imageBytes: imageBytes,
+      temperature: temperature,
+    );
+    if (raw == null) return null;
+
+    var cleaned = raw.trim();
+    if (cleaned.startsWith('```')) {
+      final lines = cleaned.split('\n');
+      if (lines.first.startsWith('```')) lines.removeAt(0);
+      if (lines.isNotEmpty && lines.last.startsWith('```')) lines.removeLast();
+      cleaned = lines.join('\n').trim();
+    }
+    try {
+      return jsonDecode(cleaned);
+    } catch (_) {
+      return null;
+    }
+  }
+}
