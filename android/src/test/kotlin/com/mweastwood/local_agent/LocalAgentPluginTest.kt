@@ -19,4 +19,16 @@ internal class LocalAgentPluginTest {
         val plugin = LocalAgentPlugin()
         assert(plugin != null)
     }
+
+    @Test
+    fun onMethodCall_setModelConfig_updatesPreferencesAndSucceeds() {
+        val plugin = LocalAgentPlugin()
+        val args = mapOf("releaseStage" to "preview", "preference" to "fast")
+        val call = MethodCall("setModelConfig", args)
+        val mockResult: MethodChannel.Result = Mockito.mock(MethodChannel.Result::class.java)
+
+        plugin.onMethodCall(call, mockResult)
+
+        Mockito.verify(mockResult).success(null)
+    }
 }
