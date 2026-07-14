@@ -176,12 +176,12 @@ void main() {
       TestWidgetsFlutterBinding.ensureInitialized();
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-        log.add(methodCall);
-        if (methodCall.method == 'checkStatus') {
-          return 'available';
-        }
-        return null;
-      });
+            log.add(methodCall);
+            if (methodCall.method == 'checkStatus') {
+              return 'available';
+            }
+            return null;
+          });
       log.clear();
     });
 
@@ -192,17 +192,14 @@ void main() {
 
     test('setModelConfig invokes method channel correctly', () async {
       final service = MethodChannelAiService();
-      await service.setModelConfig(
-        releaseStage: 'preview',
-        preference: 'fast',
-      );
+      await service.setModelConfig(releaseStage: 'preview', preference: 'fast');
 
       expect(log.length, equals(1));
       expect(log.first.method, equals('setModelConfig'));
-      expect(log.first.arguments, equals({
-        'releaseStage': 'preview',
-        'preference': 'fast',
-      }));
+      expect(
+        log.first.arguments,
+        equals({'releaseStage': 'preview', 'preference': 'fast'}),
+      );
     });
   });
 }
