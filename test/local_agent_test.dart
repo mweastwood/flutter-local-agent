@@ -37,12 +37,24 @@ class MockAiService implements AiService {
   }
 }
 
-class MockTextAgentDelegate implements AgentDelegate {
+class TestStepResult {
+  final String tool;
+  final String feedback;
+  final bool isFinish;
+
+  TestStepResult({
+    required this.tool,
+    required this.feedback,
+    required this.isFinish,
+  });
+}
+
+class MockTextAgentDelegate implements AgentDelegate<TestStepResult> {
   int counter = 0;
   final List<String> actionsApplied = [];
 
   @override
-  String formatPrompt(String userPrompt, List<AgentStepResult> history) {
+  String formatPrompt(String userPrompt, List<TestStepResult> history) {
     final buffer = StringBuffer();
     buffer.write('Prompt: $userPrompt. History:');
     for (var res in history) {
@@ -68,6 +80,20 @@ class MockTextAgentDelegate implements AgentDelegate {
   @override
   bool isFinishAction(Map<String, dynamic> actionMap) {
     return actionMap['action'] == 'stop';
+  }
+
+  @override
+  TestStepResult parseStepResult(
+    Map<String, dynamic> actionMap,
+    String feedback,
+  ) {
+    final tool =
+        actionMap['tool'] as String? ?? actionMap['action'] as String? ?? '';
+    return TestStepResult(
+      tool: tool,
+      feedback: feedback,
+      isFinish: isFinishAction(actionMap),
+    );
   }
 }
 
@@ -98,9 +124,12 @@ void main() {
         },
       ]);
       final delegate = MockTextAgentDelegate();
-      final harness = AgentHarness(aiService: mockAi, delegate: delegate);
+      final harness = AgentHarness<TestStepResult>(
+        aiService: mockAi,
+        delegate: delegate,
+      );
 
-      final steps = await harness.runDrawingLoop(
+      final steps = await harness.runLoop(
         userPrompt: 'count to 2',
         maxSteps: 5,
       );

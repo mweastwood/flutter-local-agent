@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'ai_service.dart';
 
-abstract class AgentDelegate {
+abstract class AgentDelegate<T> {
   /// Formats the prompt for the next step, incorporating loop history.
-  String formatPrompt(String userPrompt, List<AgentStepResult> history);
+  String formatPrompt(String userPrompt, List<T> history);
 
   /// Provides the visual/image input for the next step, if any.
   Uint8List? getVisualInput();
@@ -15,39 +15,25 @@ abstract class AgentDelegate {
 
   /// Checks if the action represents a termination/finish action.
   bool isFinishAction(Map<String, dynamic> actionMap);
+
+  /// Maps the raw parsed JSON and execution feedback into the custom step type T.
+  T parseStepResult(Map<String, dynamic> actionMap, String feedback);
 }
 
-class AgentStepResult {
-  final String thought;
-  final String tool;
-  final List<int> params;
-  final int colorIndex;
-  final String feedback;
-  final bool isFinish;
-
-  AgentStepResult({
-    required this.thought,
-    required this.tool,
-    required this.params,
-    required this.colorIndex,
-    required this.feedback,
-    this.isFinish = false,
-  });
-}
-
-class AgentHarness {
+class AgentHarness<T> {
   final AiService aiService;
-  final AgentDelegate delegate;
+  final AgentDelegate<T> delegate;
 
   AgentHarness({required this.aiService, required this.delegate});
 
   /// Runs the agent reasoning-action loop.
-  Future<List<AgentStepResult>> runDrawingLoop({
+  Future<List<T>> runLoop({
     required String userPrompt,
     int maxSteps = 5,
-    Function(AgentStepResult stepResult, int currentStep)? onStep,
+    double temperature = 1.0,
+    Function(T stepResult, int currentStep)? onStep,
   }) async {
-    final List<AgentStepResult> results = [];
+    final List<T> results = [];
 
     for (int step = 1; step <= maxSteps; step++) {
       // 1. Get the combined image input from the delegate
@@ -60,22 +46,11 @@ class AgentHarness {
       final responseText = await aiService.generateContent(
         prompt: prompt,
         imageBytes: visualInput,
+        temperature: temperature,
       );
 
       if (responseText == null) {
-        final errorResult = AgentStepResult(
-          thought: 'Encountered error: AI service returned empty response',
-          tool: 'finish',
-          params: [],
-          colorIndex: 0,
-          feedback: 'Error: Empty response',
-          isFinish: true,
-        );
-        results.add(errorResult);
-        if (onStep != null) {
-          onStep(errorResult, step);
-        }
-        break;
+        throw Exception('AI service returned empty response');
       }
 
       // Parse JSON from response (clean markdown if present)
@@ -100,13 +75,9 @@ class AgentHarness {
 
       if (parsed.containsKey('error')) {
         final errorMsg = parsed['error'] ?? 'AI service returned error';
-        final errorResult = AgentStepResult(
-          thought: 'Encountered error: $errorMsg',
-          tool: 'finish',
-          params: [],
-          colorIndex: 0,
-          feedback: 'Error: $errorMsg',
-          isFinish: true,
+        final errorResult = delegate.parseStepResult(
+          parsed,
+          'Error: $errorMsg',
         );
         results.add(errorResult);
         if (onStep != null) {
@@ -115,23 +86,9 @@ class AgentHarness {
         break;
       }
 
-      final thought = parsed['understanding'] ?? parsed['reasoning'] ?? '';
-      final tool = parsed['tool'] as String?;
-      final paramsRaw = parsed['params'];
-      final List<int> params = paramsRaw is List
-          ? List<int>.from(paramsRaw.map((x) => x as int))
-          : [];
-      final colorIndex = parsed['color'] as int? ?? 0;
-
-      if (tool == null || delegate.isFinishAction(parsed)) {
-        final finishResult = AgentStepResult(
-          thought: thought,
-          tool: 'finish',
-          params: [],
-          colorIndex: 0,
-          feedback: 'Agent finished drawing.',
-          isFinish: true,
-        );
+      final isFinish = delegate.isFinishAction(parsed);
+      if (isFinish) {
+        final finishResult = delegate.parseStepResult(parsed, 'Finished.');
         results.add(finishResult);
         if (onStep != null) {
           onStep(finishResult, step);
@@ -142,13 +99,7 @@ class AgentHarness {
       // Apply command to environment
       final stepFeedback = await delegate.applyAction(parsed);
 
-      final stepResult = AgentStepResult(
-        thought: thought,
-        tool: tool,
-        params: params,
-        colorIndex: colorIndex,
-        feedback: stepFeedback,
-      );
+      final stepResult = delegate.parseStepResult(parsed, stepFeedback);
 
       results.add(stepResult);
       if (onStep != null) {
