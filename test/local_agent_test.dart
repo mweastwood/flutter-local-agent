@@ -1,7 +1,24 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:local_agent/local_agent.dart';
+
+class MockHttpClient extends http.BaseClient {
+  final Future<http.Response> Function(http.BaseRequest) handler;
+  MockHttpClient(this.handler);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final response = await handler(request);
+    final stream = Stream.value(response.bodyBytes);
+    return http.StreamedResponse(
+      stream,
+      response.statusCode,
+      headers: response.headers,
+    );
+  }
+}
 
 class MockAiService implements AiService {
   final List<Map<String, dynamic>> responses;
@@ -200,5 +217,95 @@ void main() {
         equals({'releaseStage': 'preview', 'preference': 'fast'}),
       );
     });
+  });
+
+  group('OllamaAiService Tests', () {
+    test('checkStatus returns available if model is present', () async {
+      final mockClient = MockHttpClient((request) async {
+        expect(request.url.path, equals('/api/tags'));
+        expect(request.method, equals('GET'));
+        return http.Response(
+          jsonEncode({
+            'models': [
+              {'name': 'gemma4:e4b'},
+            ],
+          }),
+          200,
+        );
+      });
+
+      final service = OllamaAiService(httpClient: mockClient);
+      final status = await service.checkStatus();
+      expect(status, equals(AiCoreStatus.available));
+    });
+
+    test('checkStatus returns downloadable if model is missing', () async {
+      final mockClient = MockHttpClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'models': [
+              {'name': 'some-other-model:latest'},
+            ],
+          }),
+          200,
+        );
+      });
+
+      final service = OllamaAiService(httpClient: mockClient);
+      final status = await service.checkStatus();
+      expect(status, equals(AiCoreStatus.downloadable));
+    });
+
+    test('triggerDownload calls pull endpoint', () async {
+      var pullCalled = false;
+      final mockClient = MockHttpClient((request) async {
+        expect(request.url.path, equals('/api/pull'));
+        expect(request.method, equals('POST'));
+        final body = jsonDecode(
+          await request.finalize().transform(utf8.decoder).join(),
+        );
+        expect(body['name'], equals('gemma4:e4b'));
+        pullCalled = true;
+        return http.Response('{}', 200);
+      });
+
+      final service = OllamaAiService(httpClient: mockClient);
+      await service.triggerDownload();
+      expect(pullCalled, isTrue);
+    });
+
+    test(
+      'generateContent calls generate endpoint and formats base64 image',
+      () async {
+        var generateCalled = false;
+        final mockClient = MockHttpClient((request) async {
+          expect(request.url.path, equals('/api/generate'));
+          expect(request.method, equals('POST'));
+          final body = jsonDecode(
+            await request.finalize().transform(utf8.decoder).join(),
+          );
+          expect(body['model'], equals('gemma4:e4b'));
+          expect(body['prompt'], equals('hello gemma'));
+          expect(
+            body['images'],
+            equals([
+              base64Encode([1, 2, 3]),
+            ]),
+          );
+          expect(body['options']['temperature'], equals(0.8));
+          generateCalled = true;
+          return http.Response(jsonEncode({'response': 'hi there'}), 200);
+        });
+
+        final service = OllamaAiService(httpClient: mockClient);
+        final response = await service.generateContent(
+          prompt: 'hello gemma',
+          imageBytes: Uint8List.fromList([1, 2, 3]),
+          temperature: 0.8,
+        );
+        expect(response, equals('hi there'));
+        expect(generateCalled, isTrue);
+      },
+    );
   });
 }
