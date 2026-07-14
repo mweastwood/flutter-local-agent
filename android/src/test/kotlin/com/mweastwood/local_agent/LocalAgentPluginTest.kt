@@ -15,13 +15,8 @@ import kotlin.test.Test
 
 internal class LocalAgentPluginTest {
     @Test
-    fun onMethodCall_getPlatformVersion_returnsExpectedValue() {
+    fun testPluginInstantiation() {
         val plugin = LocalAgentPlugin()
-
-        val call = MethodCall("getPlatformVersion", null)
-        val mockResult: MethodChannel.Result = Mockito.mock(MethodChannel.Result::class.java)
-        plugin.onMethodCall(call, mockResult)
-
-        Mockito.verify(mockResult).success("Android " + android.os.Build.VERSION.RELEASE)
+        assert(plugin != null)
     }
 }

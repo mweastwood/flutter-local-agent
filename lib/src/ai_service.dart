@@ -10,6 +10,10 @@ enum AiCoreStatus { unavailable, downloadable, downloading, available }
 abstract class AiService {
   Future<AiCoreStatus> checkStatus();
   Future<void> triggerDownload();
+  Future<void> setModelConfig({
+    required String releaseStage,
+    required String preference,
+  });
   Future<String?> generateContent({
     required String prompt,
     Uint8List? imageBytes,
@@ -48,6 +52,22 @@ class MethodChannelAiService implements AiService {
       await _channel.invokeMethod<void>('triggerDownload');
     } catch (e, stack) {
       debugPrint('Error invoking triggerDownload via MethodChannel: $e');
+      debugPrint(stack.toString());
+    }
+  }
+
+  @override
+  Future<void> setModelConfig({
+    required String releaseStage,
+    required String preference,
+  }) async {
+    try {
+      await _channel.invokeMethod<void>('setModelConfig', {
+        'releaseStage': releaseStage,
+        'preference': preference,
+      });
+    } catch (e, stack) {
+      debugPrint('Error invoking setModelConfig via MethodChannel: $e');
       debugPrint(stack.toString());
     }
   }
@@ -127,6 +147,12 @@ class MockAiService implements AiService {
       });
     }
   }
+
+  @override
+  Future<void> setModelConfig({
+    required String releaseStage,
+    required String preference,
+  }) async {}
 
   @override
   Future<String?> generateContent({
