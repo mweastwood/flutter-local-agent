@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_agent/local_agent.dart';
 
@@ -15,6 +15,12 @@ class MockAiService implements AiService {
 
   @override
   Future<void> triggerDownload() async {}
+
+  @override
+  Future<void> setModelConfig({
+    required String releaseStage,
+    required String preference,
+  }) async {}
 
   @override
   Future<String?> generateContent({
@@ -158,6 +164,41 @@ void main() {
       expect(jsonStr, contains('"prompt": "prompt 1"'));
       expect(jsonStr, contains('"response": "response 1"'));
       expect(jsonStr, contains('"isError": false'));
+    });
+  });
+
+  group('MethodChannelAiService Tests', () {
+    const channel = MethodChannel('com.mweastwood.local_agent');
+    final log = <MethodCall>[];
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+            log.add(methodCall);
+            if (methodCall.method == 'checkStatus') {
+              return 'available';
+            }
+            return null;
+          });
+      log.clear();
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    test('setModelConfig invokes method channel correctly', () async {
+      final service = MethodChannelAiService();
+      await service.setModelConfig(releaseStage: 'preview', preference: 'fast');
+
+      expect(log.length, equals(1));
+      expect(log.first.method, equals('setModelConfig'));
+      expect(
+        log.first.arguments,
+        equals({'releaseStage': 'preview', 'preference': 'fast'}),
+      );
     });
   });
 }

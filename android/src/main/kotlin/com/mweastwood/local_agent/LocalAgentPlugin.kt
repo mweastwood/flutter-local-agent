@@ -24,16 +24,54 @@ class LocalAgentPlugin : FlutterPlugin, MethodCallHandler {
     private lateinit var channel: MethodChannel
     private val ioScope = CoroutineScope(Dispatchers.IO)
 
+    private var releaseStage = "stable"
+    private var preference = "full"
+
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.mweastwood.local_agent")
         channel.setMethodCallHandler(this)
     }
 
-    override fun onMethodCall(call: MethodCall, result: Result) {
-        val model = Generation.getClient()
+    private fun getModel(call: MethodCall): com.google.mlkit.genai.prompt.GenerativeModel {
+        val reqStage = call.argument<String>("releaseStage") ?: releaseStage
+        val reqPref = call.argument<String>("preference") ?: preference
 
+        val modelConfigBuilder = com.google.mlkit.genai.prompt.ModelConfig.Builder()
+        if (reqStage == "preview") {
+            modelConfigBuilder.releaseStage = 1 // ModelReleaseStage.PREVIEW
+        } else {
+            modelConfigBuilder.releaseStage = 0 // ModelReleaseStage.STABLE
+        }
+
+        if (reqPref == "fast") {
+            modelConfigBuilder.preference = 1 // ModelPreference.FAST
+        } else {
+            modelConfigBuilder.preference = 2 // ModelPreference.FULL
+        }
+        val modelConfig = modelConfigBuilder.build()
+
+        val generationConfigBuilder = com.google.mlkit.genai.prompt.GenerationConfig.Builder()
+        generationConfigBuilder.modelConfig = modelConfig
+        val config = generationConfigBuilder.build()
+
+        return Generation.getClient(config)
+    }
+
+    override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
+            "setModelConfig" -> {
+                val newStage = call.argument<String>("releaseStage")
+                val newPreference = call.argument<String>("preference")
+                if (newStage != null) {
+                    releaseStage = newStage
+                }
+                if (newPreference != null) {
+                    preference = newPreference
+                }
+                result.success(null)
+            }
             "checkStatus" -> {
+                val model = getModel(call)
                 ioScope.launch {
                     try {
                         val status = model.checkStatus()
@@ -55,6 +93,7 @@ class LocalAgentPlugin : FlutterPlugin, MethodCallHandler {
                 }
             }
             "triggerDownload" -> {
+                val model = getModel(call)
                 ioScope.launch {
                     try {
                         model.download().collect { downloadStatus ->
@@ -67,6 +106,7 @@ class LocalAgentPlugin : FlutterPlugin, MethodCallHandler {
                 result.success(null)
             }
             "generateContent" -> {
+                val model = getModel(call)
                 val promptText = call.argument<String>("prompt")
                 val imageBytes = call.argument<ByteArray>("image")
                 val temperature = call.argument<Double>("temperature")?.toFloat() ?: 0.7f

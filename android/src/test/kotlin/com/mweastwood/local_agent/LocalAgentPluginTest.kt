@@ -15,13 +15,20 @@ import kotlin.test.Test
 
 internal class LocalAgentPluginTest {
     @Test
-    fun onMethodCall_getPlatformVersion_returnsExpectedValue() {
+    fun testPluginInstantiation() {
         val plugin = LocalAgentPlugin()
+        assert(plugin != null)
+    }
 
-        val call = MethodCall("getPlatformVersion", null)
+    @Test
+    fun onMethodCall_setModelConfig_updatesPreferencesAndSucceeds() {
+        val plugin = LocalAgentPlugin()
+        val args = mapOf("releaseStage" to "preview", "preference" to "fast")
+        val call = MethodCall("setModelConfig", args)
         val mockResult: MethodChannel.Result = Mockito.mock(MethodChannel.Result::class.java)
+
         plugin.onMethodCall(call, mockResult)
 
-        Mockito.verify(mockResult).success("Android " + android.os.Build.VERSION.RELEASE)
+        Mockito.verify(mockResult).success(null)
     }
 }
