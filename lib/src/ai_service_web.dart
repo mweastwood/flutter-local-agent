@@ -19,7 +19,7 @@ extension ChromeAiExtension on ChromeAi {
   external JSPromise getNextStroke(JSString prompt, JSString systemInstruction);
 }
 
-class WebAiService implements AiService {
+class WebAiService extends AiService {
   @override
   Future<AiCoreStatus> checkStatus() async {
     try {

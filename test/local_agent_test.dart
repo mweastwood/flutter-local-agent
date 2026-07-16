@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_agent/local_agent.dart';
 
-class MockAiService implements AiService {
+class TestMockAiService extends AiService {
   final List<Map<String, dynamic>> responses;
   int callCount = 0;
   final List<String> capturedPrompts = [];
 
-  MockAiService(this.responses);
+  TestMockAiService(this.responses);
 
   @override
   Future<AiCoreStatus> checkStatus() async => AiCoreStatus.available;
@@ -100,7 +100,7 @@ class MockTextAgentDelegate implements AgentDelegate<TestStepResult> {
 void main() {
   group('AgentHarness Generic ReAct Loop Tests', () {
     test('harness executes generic steps and updates environment', () async {
-      final mockAi = MockAiService([
+      final mockAi = TestMockAiService([
         {
           'action': 'increment',
           'understanding': 'incrementing count',
@@ -227,6 +227,29 @@ void main() {
       expect(
         log.first.arguments,
         equals({'releaseStage': 'preview', 'preference': 'fast'}),
+      );
+    });
+  });
+
+  group('Auto-Continuation Tests', () {
+    test('does not continue if autoContinueLimit is 0', () async {
+      final service = MockAiService();
+      final response = await service.generateContentWithContinuation(
+        prompt: 'simulate_truncation',
+        autoContinueLimit: 0,
+      );
+      expect(response, equals('Response is partial and'));
+    });
+
+    test('continues to completion if autoContinueLimit allows', () async {
+      final service = MockAiService();
+      final response = await service.generateContentWithContinuation(
+        prompt: 'simulate_truncation',
+        autoContinueLimit: 1,
+      );
+      expect(
+        response,
+        equals('Response is partial and finished successfully.'),
       );
     });
   });
