@@ -252,5 +252,117 @@ void main() {
         equals('Response is partial and finished successfully.'),
       );
     });
+
+    test(
+      'detects truncation via JSON heuristic and cleans chunk fences',
+      () async {
+        final service = _HeuristicMockAiService();
+        final response = await service.generateContentWithContinuation(
+          prompt: 'get shapes',
+          autoContinueLimit: 2,
+        );
+        expect(service.calls, equals(2));
+        expect(
+          response,
+          equals('{"shapes": [\n  {"type": "circle", "radius": 5}\n]\n}'),
+        );
+      },
+    );
   });
+
+  group('Heuristic & Chunk Cleaning Tests', () {
+    test('isTruncatedHeuristic native override', () {
+      expect(isTruncatedHeuristic('{}', true), isTrue);
+      expect(isTruncatedHeuristic('', false), isFalse);
+      expect(isTruncatedHeuristic('   ', false), isFalse);
+    });
+
+    test('isTruncatedHeuristic JSON checks', () {
+      // Incomplete JSON array/object
+      expect(isTruncatedHeuristic('[1, 2', false), isTrue);
+      expect(isTruncatedHeuristic('{"foo": "bar"', false), isTrue);
+
+      // Complete JSON array/object
+      expect(isTruncatedHeuristic('[1, 2]', false), isFalse);
+      expect(isTruncatedHeuristic('{"foo": "bar"}', false), isFalse);
+    });
+
+    test('isTruncatedHeuristic code fence checks', () {
+      expect(isTruncatedHeuristic('```json\n{"foo": "bar"', false), isTrue);
+      expect(
+        isTruncatedHeuristic('```json\n{"foo": "bar"}```', false),
+        isFalse,
+      );
+    });
+
+    test('isTruncatedHeuristic text truncation endings', () {
+      // Ends in alphanumeric or comma
+      expect(isTruncatedHeuristic('Continuing on next line,', false), isTrue);
+      expect(isTruncatedHeuristic('Finished with word', false), isTrue);
+
+      // Ends with sentence punctuation
+      expect(isTruncatedHeuristic('Finished with period.', false), isFalse);
+      expect(isTruncatedHeuristic('What is this?', false), isFalse);
+      expect(isTruncatedHeuristic('Exciting!', false), isFalse);
+    });
+
+    test('cleanContinuationChunk code fences', () {
+      expect(cleanContinuationChunk('```json\nhello\n```'), equals('hello'));
+      expect(cleanContinuationChunk('```\nhello```'), equals('hello'));
+    });
+
+    test('cleanContinuationChunk conversational headers', () {
+      expect(
+        cleanContinuationChunk('Here is the continuation: hello'),
+        equals('hello'),
+      );
+      expect(cleanContinuationChunk('continuing: hello'), equals('hello'));
+      expect(cleanContinuationChunk('continuation: hello'), equals('hello'));
+    });
+
+    test('cleanContinuationChunk preserves leading/trailing spaces', () {
+      expect(cleanContinuationChunk(' hello '), equals(' hello '));
+    });
+  });
+}
+
+class _HeuristicMockAiService extends AiService {
+  int calls = 0;
+  @override
+  Future<AiCoreStatus> checkStatus() async => AiCoreStatus.available;
+  @override
+  Future<void> triggerDownload() async {}
+  @override
+  Future<void> setModelConfig({
+    required String releaseStage,
+    required String preference,
+  }) async {}
+  @override
+  Future<AiResponse?> generateContentRaw({
+    required String prompt,
+    Uint8List? imageBytes,
+    double temperature = 1.0,
+    int? maxOutputTokens,
+  }) async {
+    calls++;
+    if (calls == 1) {
+      return AiResponse(
+        text: '{"shapes": [\n  {"type": "circle"',
+        isTruncated: false,
+      );
+    } else {
+      return AiResponse(
+        text: '```json\n, "radius": 5}\n]\n}```',
+        isTruncated: false,
+      );
+    }
+  }
+
+  @override
+  Future<String?> generateContent({
+    required String prompt,
+    Uint8List? imageBytes,
+    double temperature = 1.0,
+    int? maxOutputTokens,
+  }) async => null;
 }

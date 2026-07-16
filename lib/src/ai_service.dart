@@ -15,6 +15,80 @@ class AiResponse {
   AiResponse({required this.text, this.isTruncated = false});
 }
 
+@visibleForTesting
+bool isTruncatedHeuristic(String text, bool nativeIsTruncated) {
+  if (nativeIsTruncated) return true;
+
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return false;
+
+  // JSON heuristic: starts with JSON structural character but does not end with one
+  final startsWithJson = trimmed.startsWith('[') || trimmed.startsWith('{');
+  if (startsWithJson) {
+    final endsWithJson = trimmed.endsWith(']') || trimmed.endsWith('}');
+    if (!endsWithJson) {
+      return true;
+    }
+  }
+
+  // Code fence heuristic: has opening code fence but not closing, or ends inside one
+  if (trimmed.contains('```') && !trimmed.endsWith('```')) {
+    return true;
+  }
+
+  // Alphanumeric/comma end heuristic: if it ends with a letter, digit, comma, or open quote
+  // and does not have ending punctuation, it might be truncated.
+  final lastChar = trimmed.substring(trimmed.length - 1);
+  final isEndingPunctuation = RegExp(r'[.!?}]').hasMatch(lastChar);
+  if (!isEndingPunctuation) {
+    if (RegExp(r'[a-zA-Z0-9,"\-]').hasMatch(lastChar)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+@visibleForTesting
+String cleanContinuationChunk(String chunk) {
+  var cleaned = chunk;
+
+  // Strip starting code fences
+  if (cleaned.trimLeft().startsWith('```')) {
+    final lines = cleaned.split('\n');
+    if (lines.isNotEmpty && lines.first.trim().startsWith('```')) {
+      lines.removeAt(0);
+    }
+    cleaned = lines.join('\n');
+  }
+
+  // Strip ending code fences
+  if (cleaned.trimRight().endsWith('```')) {
+    final idx = cleaned.lastIndexOf('```');
+    if (idx != -1) {
+      cleaned = cleaned.substring(0, idx);
+    }
+  }
+
+  // Strip leading and trailing newlines (preserving spaces)
+  cleaned = cleaned.replaceFirst(RegExp(r'^\r?\n+'), '');
+  cleaned = cleaned.replaceFirst(RegExp(r'\r?\n+$'), '');
+
+  // Remove common conversational headers
+  final headers = [
+    RegExp(r'^\s*here is the continuation:?\s*', caseSensitive: false),
+    RegExp(r'^\s*continuing:?\s*', caseSensitive: false),
+    RegExp(r'^\s*continuation:?\s*', caseSensitive: false),
+  ];
+  for (final header in headers) {
+    if (cleaned.startsWith(header)) {
+      cleaned = cleaned.replaceFirst(header, '');
+    }
+  }
+
+  return cleaned;
+}
+
 Future<String?> runWithAutoContinuation({
   required String initialPrompt,
   required int autoContinueLimit,
@@ -24,7 +98,7 @@ Future<String?> runWithAutoContinuation({
   if (response == null) return null;
 
   var text = response.text;
-  var isTruncated = response.isTruncated;
+  var isTruncated = isTruncatedHeuristic(text, response.isTruncated);
   var continuationCount = 0;
 
   while (isTruncated && continuationCount < autoContinueLimit) {
@@ -37,8 +111,9 @@ Future<String?> runWithAutoContinuation({
     final nextResponse = await runCompletion(continuationPrompt);
     if (nextResponse == null) break;
 
-    text += nextResponse.text;
-    isTruncated = nextResponse.isTruncated;
+    final nextText = cleanContinuationChunk(nextResponse.text);
+    text += nextText;
+    isTruncated = isTruncatedHeuristic(nextText, nextResponse.isTruncated);
   }
 
   return text;
