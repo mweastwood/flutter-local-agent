@@ -145,10 +145,15 @@ class LocalAgentPlugin : FlutterPlugin, MethodCallHandler {
                             )
                         }
 
-                        val responseText = response.candidates.firstOrNull()?.text ?: ""
+                        val candidate = response.candidates.firstOrNull()
+                        val responseText = candidate?.text ?: ""
+                        val isTruncated = candidate?.finishReason == com.google.mlkit.genai.prompt.Candidate.FinishReason.MAX_TOKENS
 
                         withContext(Dispatchers.Main) {
-                            result.success(responseText)
+                            result.success(mapOf(
+                                "text" to responseText,
+                                "isTruncated" to isTruncated
+                            ))
                         }
                     } catch (e: Throwable) {
                         Log.e("LocalAgentPlugin", "Error generating content: ${e.message}", e)
