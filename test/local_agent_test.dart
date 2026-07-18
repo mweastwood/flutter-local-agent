@@ -257,8 +257,10 @@ void main() {
       'detects truncation via JSON heuristic and cleans chunk fences',
       () async {
         final service = _HeuristicMockAiService();
+        final dummyImageBytes = Uint8List.fromList([1, 2, 3]);
         final response = await service.generateContentWithContinuation(
           prompt: 'get shapes',
+          imageBytes: dummyImageBytes,
           autoContinueLimit: 2,
         );
         expect(service.calls, equals(2));
@@ -266,6 +268,8 @@ void main() {
           response,
           equals('{"shapes": [\n  {"type": "circle", "radius": 5}\n]\n}'),
         );
+        expect(service.capturedImages[0], equals(dummyImageBytes));
+        expect(service.capturedImages[1], equals(dummyImageBytes));
       },
     );
   });
@@ -318,16 +322,124 @@ void main() {
       );
       expect(cleanContinuationChunk('continuing: hello'), equals('hello'));
       expect(cleanContinuationChunk('continuation: hello'), equals('hello'));
+      expect(
+        cleanContinuationChunk(
+          'Continuing from where it was truncated: , "top"',
+        ),
+        equals(', "top"'),
+      );
+      expect(
+        cleanContinuationChunk(
+          'Here is the continued JSON response:\n\n{"left": 0.4}',
+        ),
+        equals('{"left": 0.4}'),
+      );
+      expect(
+        cleanContinuationChunk('Continuing the list:\n- First component'),
+        equals('- First component'),
+      );
+      // Verify we do NOT strip normal text continuations ending in colons that are not followed by JSON structural chars
+      expect(
+        cleanContinuationChunk('blade: steel hilt'),
+        equals('blade: steel hilt'),
+      );
     });
 
     test('cleanContinuationChunk preserves leading/trailing spaces', () {
       expect(cleanContinuationChunk(' hello '), equals(' hello '));
+    });
+
+    test('stitchContinuation boundary deduplication', () {
+      // General case
+      expect(stitchContinuation('abcde', 'cdefgh'), equals('abcdefgh'));
+      expect(stitchContinuation('hello', 'world'), equals('helloworld'));
+      expect(stitchContinuation('hello wor', 'world'), equals('hello world'));
+
+      // Case 6 simulation
+      final t6 =
+          '[\n  {\n    "name": "stopper",\n    "description": "Cork stopper",\n    "relativeBoundingBox": { "left": 0.38';
+      final n6 =
+          '{\n    "name": "stopper",\n    "description": "Cork stopper",\n    "relativeBoundingBox": { "left": 0.35, "top": 0.05 }';
+      expect(
+        stitchContinuation(t6, n6),
+        equals(
+          '[\n  {\n    "name": "stopper",\n    "description": "Cork stopper",\n    "relativeBoundingBox": { "left": 0.35, "top": 0.05 }',
+        ),
+      );
+
+      // Case 7 simulation
+      final t7 = ',\n    "name": "';
+      final n7 = '"name": "stopper",';
+      expect(stitchContinuation(t7, n7), equals(',\n    "name": "stopper",'));
+
+      // Case 8 simulation
+      final t8 = '[\n  {\n    "name":';
+      final n8 = '{\n    "name": "bottle_neck"';
+      expect(
+        stitchContinuation(t8, n8),
+        equals('[\n  {\n    "name": "bottle_neck"'),
+      );
+
+      // Edge case: Short overlaps (< 3 characters) should NOT be matched to prevent word corruption
+      expect(stitchContinuation('draw a', 'apple'), equals('draw aapple'));
+      expect(stitchContinuation('cat', 'attack'), equals('catattack'));
+
+      // Edge case: Large overlaps (> 500 characters) should be capped at 500
+      final longStr = 'a' * 600;
+      expect(
+        stitchContinuation(longStr, 'a' * 600 + 'b'),
+        equals('a' * 700 + 'b'),
+      );
+    });
+
+    test('repairJson structural balancing', () {
+      // Case 7 simulation with missing closing brace before bracket
+      expect(
+        repairJson(
+          '[\n  {\n    "name": "stopper",\n  "description": "cork",\n  "relativeBoundingBox": { "left": 0.38 }\n]',
+        ),
+        equals(
+          '[\n  {\n    "name": "stopper",\n  "description": "cork",\n  "relativeBoundingBox": { "left": 0.38 }\n}]',
+        ),
+      );
+
+      // Unclosed quotes inside string shouldn't break balancing outside string
+      expect(
+        repairJson('{"test": "hello { world"'),
+        equals('{"test": "hello { world"}'),
+      );
+
+      // Simple unclosed array/object
+      expect(repairJson('[{"a": 1'), equals('[{"a": 1}]'));
+
+      // Empty string
+      expect(repairJson(''), equals(''));
+
+      // Normal valid JSON (should remain unchanged)
+      expect(
+        repairJson('{"a": 1, "b": [2, 3]}'),
+        equals('{"a": 1, "b": [2, 3]}'),
+      );
+
+      // Nested unclosed structures
+      expect(repairJson('[ { "a": { "b": 1'), equals('[ { "a": { "b": 1}}]'));
+
+      // Escaped quotes inside JSON string
+      expect(
+        repairJson('{"test": "hello \\"world\\" { nested"'),
+        equals('{"test": "hello \\"world\\" { nested"}'),
+      );
+
+      // Brackets/braces characters inside JSON string
+      expect(repairJson('{"test": "}"}'), equals('{"test": "}"}'));
     });
   });
 }
 
 class _HeuristicMockAiService extends AiService {
   int calls = 0;
+  final List<Uint8List?> capturedImages = [];
+
   @override
   Future<AiCoreStatus> checkStatus() async => AiCoreStatus.available;
   @override
@@ -345,6 +457,7 @@ class _HeuristicMockAiService extends AiService {
     int? maxOutputTokens,
   }) async {
     calls++;
+    capturedImages.add(imageBytes);
     if (calls == 1) {
       return AiResponse(
         text: '{"shapes": [\n  {"type": "circle"',
