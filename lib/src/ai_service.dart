@@ -74,11 +74,18 @@ String cleanContinuationChunk(String chunk) {
   cleaned = cleaned.replaceFirst(RegExp(r'^\r?\n+'), '');
   cleaned = cleaned.replaceFirst(RegExp(r'\r?\n+$'), '');
 
+  // Remove conversational headers ending with colon or period followed by structural JSON chars or list item markers
+  cleaned = cleaned.replaceFirst(
+    RegExp(r'^[a-zA-Z\s\n]+[:.]\s*(?=[{\["",\-\]])'),
+    '',
+  );
+  cleaned = cleaned.replaceFirst(RegExp(r'^\r?\n+'), '');
+
   // Remove common conversational headers
   final headers = [
-    RegExp(r'^\s*here is the continuation:?\s*', caseSensitive: false),
-    RegExp(r'^\s*continuing:?\s*', caseSensitive: false),
-    RegExp(r'^\s*continuation:?\s*', caseSensitive: false),
+    RegExp(r'^\s*here is the continuation:\s*', caseSensitive: false),
+    RegExp(r'^\s*continuing:\s*', caseSensitive: false),
+    RegExp(r'^\s*continuation:\s*', caseSensitive: false),
   ];
   for (final header in headers) {
     if (cleaned.startsWith(header)) {
@@ -87,6 +94,95 @@ String cleanContinuationChunk(String chunk) {
   }
 
   return cleaned;
+}
+
+@visibleForTesting
+String stitchContinuation(String text, String nextText) {
+  for (var offset = 0; offset < 50; offset++) {
+    if (text.length <= offset) break;
+    final subText = offset == 0
+        ? text
+        : text.substring(0, text.length - offset);
+
+    var maxOverlap = subText.length < nextText.length
+        ? subText.length
+        : nextText.length;
+    if (maxOverlap > 500) {
+      maxOverlap = 500;
+    }
+    for (var i = maxOverlap; i >= 3; i--) {
+      final suffix = subText.substring(subText.length - i);
+      final prefix = nextText.substring(0, i);
+      if (suffix == prefix) {
+        return subText + nextText.substring(i);
+      }
+    }
+  }
+
+  return text + nextText;
+}
+
+@visibleForTesting
+String repairJson(String json) {
+  var inString = false;
+  var escape = false;
+  final stack = <String>[];
+  final result = StringBuffer();
+
+  for (var i = 0; i < json.length; i++) {
+    final char = json[i];
+    if (escape) {
+      escape = false;
+      result.write(char);
+      continue;
+    }
+    if (char == '\\') {
+      escape = true;
+      result.write(char);
+      continue;
+    }
+    if (char == '"') {
+      inString = !inString;
+      result.write(char);
+      continue;
+    }
+    if (inString) {
+      result.write(char);
+      continue;
+    }
+
+    if (char == '{' || char == '[') {
+      stack.add(char);
+      result.write(char);
+    } else if (char == '}') {
+      if (stack.isNotEmpty && stack.last == '{') {
+        stack.removeLast();
+      }
+      result.write(char);
+    } else if (char == ']') {
+      while (stack.isNotEmpty && stack.last == '{') {
+        result.write('}');
+        stack.removeLast();
+      }
+      if (stack.isNotEmpty && stack.last == '[') {
+        stack.removeLast();
+      }
+      result.write(char);
+    } else {
+      result.write(char);
+    }
+  }
+
+  while (stack.isNotEmpty) {
+    final open = stack.removeLast();
+    if (open == '{') {
+      result.write('}');
+    } else if (open == '[') {
+      result.write(']');
+    }
+  }
+
+  return result.toString();
 }
 
 Future<String?> runWithAutoContinuation({
@@ -112,10 +208,14 @@ Future<String?> runWithAutoContinuation({
     if (nextResponse == null) break;
 
     final nextText = cleanContinuationChunk(nextResponse.text);
-    text += nextText;
+    text = stitchContinuation(text, nextText);
     isTruncated = isTruncatedHeuristic(nextText, nextResponse.isTruncated);
   }
 
+  final trimmed = text.trim();
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    return repairJson(text);
+  }
   return text;
 }
 
