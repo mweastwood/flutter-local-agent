@@ -233,10 +233,7 @@ abstract class AiService {
     int? maxOutputTokens,
   });
 
-  Future<int> countTokens({
-    required String prompt,
-    Uint8List? imageBytes,
-  });
+  Future<int> countTokens({required String prompt, Uint8List? imageBytes});
 
   Future<AiResponse?> generateContentRaw({
     required String prompt,

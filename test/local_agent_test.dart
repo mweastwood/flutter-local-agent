@@ -285,17 +285,20 @@ void main() {
       },
     );
 
-    test('countTokens calculates expected mock value with and without image', () async {
-      final service = _HeuristicMockAiService();
-      final countNoImage = await service.countTokens(prompt: 'hello world');
-      expect(countNoImage, equals(3)); // 11 / 4 rounded
+    test(
+      'countTokens calculates expected mock value with and without image',
+      () async {
+        final service = _HeuristicMockAiService();
+        final countNoImage = await service.countTokens(prompt: 'hello world');
+        expect(countNoImage, equals(3)); // 11 / 4 rounded
 
-      final countWithImage = await service.countTokens(
-        prompt: 'hello world',
-        imageBytes: Uint8List.fromList([1, 2, 3]),
-      );
-      expect(countWithImage, equals(259)); // 3 + 256
-    });
+        final countWithImage = await service.countTokens(
+          prompt: 'hello world',
+          imageBytes: Uint8List.fromList([1, 2, 3]),
+        );
+        expect(countWithImage, equals(259)); // 3 + 256
+      },
+    );
   });
 
   group('Heuristic & Chunk Cleaning Tests', () {
