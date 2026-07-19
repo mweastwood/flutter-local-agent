@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:local_agent/local_agent.dart';
+import 'package:flutter_agent_core/flutter_agent_core.dart';
 
 class TestMockAiService extends AiService {
   final List<Map<String, dynamic>> responses;
