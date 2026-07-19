@@ -126,11 +126,11 @@ class LocalAgentPlugin : FlutterPlugin, MethodCallHandler {
 
                         val countResponse = if (bitmap != null) {
                             model.countTokens(
-                                generateContentRequest(ImagePart(bitmap), TextPart(promptText))
+                                generateContentRequest(ImagePart(bitmap), TextPart(promptText)) {}
                             )
                         } else {
                             model.countTokens(
-                                generateContentRequest(TextPart(promptText))
+                                generateContentRequest(TextPart(promptText)) {}
                             )
                         }
 
