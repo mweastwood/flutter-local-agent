@@ -233,6 +233,11 @@ abstract class AiService {
     int? maxOutputTokens,
   });
 
+  Future<int> countTokens({
+    required String prompt,
+    Uint8List? imageBytes,
+  });
+
   Future<AiResponse?> generateContentRaw({
     required String prompt,
     Uint8List? imageBytes,
@@ -383,6 +388,24 @@ class MethodChannelAiService extends AiService {
     );
     return res?.text;
   }
+
+  @override
+  Future<int> countTokens({
+    required String prompt,
+    Uint8List? imageBytes,
+  }) async {
+    try {
+      final int? result = await _channel.invokeMethod<int>('countTokens', {
+        'prompt': prompt,
+        'image': imageBytes,
+      });
+      return result ?? 0;
+    } catch (e, stack) {
+      debugPrint('Error invoking countTokens via MethodChannel: $e');
+      debugPrint(stack.toString());
+      return 0;
+    }
+  }
 }
 
 class MockAiService extends AiService {
@@ -458,6 +481,18 @@ class MockAiService extends AiService {
       maxOutputTokens: maxOutputTokens,
     );
     return res?.text;
+  }
+
+  @override
+  Future<int> countTokens({
+    required String prompt,
+    Uint8List? imageBytes,
+  }) async {
+    int count = (prompt.length / 4).round();
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      count += 256;
+    }
+    return count;
   }
 }
 

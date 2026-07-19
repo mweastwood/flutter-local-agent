@@ -35,6 +35,18 @@ class TestMockAiService extends AiService {
     }
     return jsonEncode({'tool': 'finish', 'reasoning': 'Done'});
   }
+
+  @override
+  Future<int> countTokens({
+    required String prompt,
+    Uint8List? imageBytes,
+  }) async {
+    int count = (prompt.length / 4).round();
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      count += 256;
+    }
+    return count;
+  }
 }
 
 class TestStepResult {
@@ -272,6 +284,18 @@ void main() {
         expect(service.capturedImages[1], equals(dummyImageBytes));
       },
     );
+
+    test('countTokens calculates expected mock value with and without image', () async {
+      final service = _HeuristicMockAiService();
+      final countNoImage = await service.countTokens(prompt: 'hello world');
+      expect(countNoImage, equals(3)); // 11 / 4 rounded
+
+      final countWithImage = await service.countTokens(
+        prompt: 'hello world',
+        imageBytes: Uint8List.fromList([1, 2, 3]),
+      );
+      expect(countWithImage, equals(259)); // 3 + 256
+    });
   });
 
   group('Heuristic & Chunk Cleaning Tests', () {
@@ -478,4 +502,16 @@ class _HeuristicMockAiService extends AiService {
     double temperature = 1.0,
     int? maxOutputTokens,
   }) async => null;
+
+  @override
+  Future<int> countTokens({
+    required String prompt,
+    Uint8List? imageBytes,
+  }) async {
+    int count = (prompt.length / 4).round();
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      count += 256;
+    }
+    return count;
+  }
 }
