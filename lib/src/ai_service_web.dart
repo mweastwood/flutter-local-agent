@@ -95,4 +95,16 @@ class WebAiService extends AiService {
     }
     return null;
   }
+
+  @override
+  Future<int> countTokens({
+    required String prompt,
+    Uint8List? imageBytes,
+  }) async {
+    int count = (prompt.length / 4).round();
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      count += 256;
+    }
+    return count;
+  }
 }

@@ -105,6 +105,48 @@ class LocalAgentPlugin : FlutterPlugin, MethodCallHandler {
                 }
                 result.success(null)
             }
+            "countTokens" -> {
+                val model = getModel(call)
+                val promptText = call.argument<String>("prompt")
+                val imageBytes = call.argument<ByteArray>("image")
+
+                if (promptText == null) {
+                    result.error("invalid_argument", "prompt is missing", null)
+                    return
+                }
+
+                ioScope.launch {
+                    var bitmap: Bitmap? = null
+                    try {
+                        bitmap = if (imageBytes != null && imageBytes.isNotEmpty()) {
+                            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                        } else {
+                            null
+                        }
+
+                        val countResponse = if (bitmap != null) {
+                            model.countTokens(
+                                generateContentRequest(ImagePart(bitmap), TextPart(promptText)) {}
+                            )
+                        } else {
+                            model.countTokens(
+                                generateContentRequest(TextPart(promptText)) {}
+                            )
+                        }
+
+                        withContext(Dispatchers.Main) {
+                            result.success(countResponse.totalTokens)
+                        }
+                    } catch (e: Throwable) {
+                        Log.e("LocalAgentPlugin", "Error counting tokens: ${e.message}", e)
+                        withContext(Dispatchers.Main) {
+                            result.error("token_counting_failed", e.message, null)
+                        }
+                    } finally {
+                        bitmap?.recycle()
+                    }
+                }
+            }
             "generateContent" -> {
                 val model = getModel(call)
                 val promptText = call.argument<String>("prompt")
