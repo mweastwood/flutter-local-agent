@@ -10,16 +10,19 @@ void main() {
       expect(allModels.any((m) => m.modelName == 'glm-4.7-flash'), isTrue);
 
       final geminiOnly = CloudModelDatabase.getAvailableModels(
-        provider: 'geminiCloud',
+        provider: CloudProvider.gemini,
       );
-      expect(geminiOnly.every((m) => m.providerName == 'geminiCloud'), isTrue);
+      expect(
+        geminiOnly.every((m) => m.provider == CloudProvider.gemini),
+        isTrue,
+      );
       expect(geminiOnly.any((m) => m.modelName == 'gemini-3.5-flash'), isTrue);
       expect(geminiOnly.any((m) => m.modelName == 'glm-4.7-flash'), isFalse);
 
       final zhipuOnly = CloudModelDatabase.getAvailableModels(
-        provider: 'zhipuCloud',
+        provider: CloudProvider.zhipu,
       );
-      expect(zhipuOnly.every((m) => m.providerName == 'zhipuCloud'), isTrue);
+      expect(zhipuOnly.every((m) => m.provider == CloudProvider.zhipu), isTrue);
       expect(zhipuOnly.any((m) => m.modelName == 'glm-4.7-flash'), isTrue);
       expect(zhipuOnly.any((m) => m.modelName == 'gemini-3.5-flash'), isFalse);
     });
@@ -30,7 +33,7 @@ void main() {
       expect(allNames, contains('glm-4.7-flash'));
 
       final geminiNames = CloudModelDatabase.getAvailableModelNames(
-        provider: 'geminiCloud',
+        provider: CloudProvider.gemini,
       );
       expect(geminiNames, contains('gemini-3.5-flash'));
       expect(geminiNames, isNot(contains('glm-4.7-flash')));
@@ -39,7 +42,7 @@ void main() {
     test('CloudModelDatabase getModelInfo retrieves details', () {
       final info = CloudModelDatabase.getModelInfo('gemini-3.5-flash');
       expect(info, isNotNull);
-      expect(info!.providerName, equals('geminiCloud'));
+      expect(info!.provider, equals(CloudProvider.gemini));
       expect(info.limitRpm, equals(15));
 
       final nonExistent = CloudModelDatabase.getModelInfo('some-fake-model');

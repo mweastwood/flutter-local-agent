@@ -6,7 +6,7 @@ void main() {
     test('RateLimiter enforces Request-Per-Second (RPS) limits', () async {
       final mockInfo = CloudModelInfo(
         modelName: 'test-rps-model',
-        providerName: 'test-provider',
+        provider: CloudProvider.gemini,
         limitRps: 10, // 10 RPS -> 100ms interval
         description: 'Test limit',
       );
@@ -28,7 +28,7 @@ void main() {
     test('RateLimiter honors throttlePercentage setting', () async {
       final mockInfo = CloudModelInfo(
         modelName: 'test-rps-model-pct',
-        providerName: 'test-provider',
+        provider: CloudProvider.gemini,
         limitRps: 10, // 10 RPS -> normally 100ms interval
         description: 'Test limit',
       );
@@ -50,7 +50,7 @@ void main() {
     test('RateLimiter handles Requests-Per-Minute (RPM) throttling', () async {
       final mockInfo = CloudModelInfo(
         modelName: 'test-rpm-model',
-        providerName: 'test-provider',
+        provider: CloudProvider.gemini,
         limitRpm:
             120, // 120 RPM -> 2 requests per second (500ms interval equivalent)
         description: 'Test limit',
