@@ -1,4 +1,4 @@
-name: local_agent
+name: flutter_agent_core
 description: "A new Flutter plugin project."
 version: 0.0.1
 homepage:
@@ -43,8 +43,8 @@ flutter:
         package: com.mweastwood.local_agent
         pluginClass: LocalAgentPlugin
       web:
-        pluginClass: LocalAgentWeb
-        fileName: local_agent_web.dart
+        pluginClass: FlutterAgentCoreWeb
+        fileName: flutter_agent_core_web.dart
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:
