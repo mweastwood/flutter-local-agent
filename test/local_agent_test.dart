@@ -391,23 +391,28 @@ void main() {
       expect(response?.isTruncated, isFalse);
     });
 
-    test('handles client exception gracefully by returning exception details', () async {
-      final mockClient = MockHttpClient((request) async {
-        throw Exception('Connection failed');
-      });
+    test(
+      'handles client exception gracefully by returning exception details',
+      () async {
+        final mockClient = MockHttpClient((request) async {
+          throw Exception('Connection failed');
+        });
 
-      final service = CloudAiService(
-        baseUrl: 'https://api.gemini.com/v1',
-        apiKey: 'test-key',
-        modelName: 'gemini-1.5-flash',
-        httpClient: mockClient,
-      );
+        final service = CloudAiService(
+          baseUrl: 'https://api.gemini.com/v1',
+          apiKey: 'test-key',
+          modelName: 'gemini-1.5-flash',
+          httpClient: mockClient,
+        );
 
-      final response = await service.generateContentRaw(prompt: 'hello world');
-      expect(response?.text, contains('error'));
-      expect(response?.text, contains('Connection failed'));
-      expect(response?.isTruncated, isFalse);
-    });
+        final response = await service.generateContentRaw(
+          prompt: 'hello world',
+        );
+        expect(response?.text, contains('error'));
+        expect(response?.text, contains('Connection failed'));
+        expect(response?.isTruncated, isFalse);
+      },
+    );
 
     test('countTokens calculates local estimate', () async {
       final service = CloudAiService(
