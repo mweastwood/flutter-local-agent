@@ -1,0 +1,132 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'ai_service.dart';
+
+class CloudAiService extends AiService {
+  final String baseUrl;
+  final String apiKey;
+  final String modelName;
+  final http.Client _httpClient;
+
+  CloudAiService({
+    required this.baseUrl,
+    required this.apiKey,
+    required this.modelName,
+    http.Client? httpClient,
+  }) : _httpClient = httpClient ?? http.Client();
+
+  @override
+  Future<AiCoreStatus> checkStatus() async {
+    return AiCoreStatus.available;
+  }
+
+  @override
+  Future<void> triggerDownload() async {}
+
+  @override
+  Future<void> setModelConfig({
+    required String releaseStage,
+    required String preference,
+  }) async {}
+
+  @override
+  Future<int> countTokens({
+    required String prompt,
+    Uint8List? imageBytes,
+  }) async {
+    // Estimator: 1 token is roughly 4 characters
+    int count = (prompt.length / 4).round();
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      count += 256;
+    }
+    return count;
+  }
+
+  @override
+  Future<AiResponse?> generateContentRaw({
+    required String prompt,
+    Uint8List? imageBytes,
+    double temperature = 1.0,
+    int? maxOutputTokens,
+  }) async {
+    final url = Uri.parse('$baseUrl/chat/completions');
+
+    final List<Map<String, dynamic>> messages = [];
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      final base64Image = base64Encode(imageBytes);
+      messages.add({
+        'role': 'user',
+        'content': [
+          {'type': 'text', 'text': prompt},
+          {
+            'type': 'image_url',
+            'image_url': {'url': 'data:image/png;base64,$base64Image'},
+          },
+        ],
+      });
+    } else {
+      messages.add({'role': 'user', 'content': prompt});
+    }
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $apiKey',
+    };
+
+    final body = jsonEncode({
+      'model': modelName,
+      'messages': messages,
+      'temperature': temperature,
+      'max_tokens': ?maxOutputTokens,
+    });
+
+    try {
+      final response = await _httpClient.post(
+        url,
+        headers: headers,
+        body: body,
+      );
+      if (response.statusCode != 200) {
+        debugPrint(
+          'CloudAiService error response: ${response.statusCode} - ${response.body}',
+        );
+        return AiResponse(
+          text: '{"error": "Server returned code ${response.statusCode}"}',
+          isTruncated: false,
+        );
+      }
+
+      final data = jsonDecode(response.body);
+      final choice = data['choices']?[0];
+      final text = choice?['message']?['content'] as String?;
+      final finishReason = choice?['finish_reason'] as String?;
+      final isTruncated = finishReason == 'length';
+
+      if (text == null) return null;
+      return AiResponse(text: text, isTruncated: isTruncated);
+    } catch (e, stack) {
+      debugPrint('Error in CloudAiService post request: $e\n$stack');
+      return AiResponse(
+        text: '{"error": "${e.toString().replaceAll('"', '\\"')}"}',
+        isTruncated: false,
+      );
+    }
+  }
+
+  @override
+  Future<String?> generateContent({
+    required String prompt,
+    Uint8List? imageBytes,
+    double temperature = 1.0,
+    int? maxOutputTokens,
+  }) async {
+    final res = await generateContentRaw(
+      prompt: prompt,
+      imageBytes: imageBytes,
+      temperature: temperature,
+      maxOutputTokens: maxOutputTokens,
+    );
+    return res?.text;
+  }
+}
