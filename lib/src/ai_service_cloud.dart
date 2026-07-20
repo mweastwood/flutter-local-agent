@@ -246,7 +246,7 @@ class CloudAiService extends AiService {
   }) async {
     if (_rateLimiter != null) {
       final estimatedTokens = await countTokens(prompt: prompt, imageBytes: imageBytes);
-      await _rateLimiter!.throttleBeforeRequest(estimatedTokens);
+      await _rateLimiter.throttleBeforeRequest(estimatedTokens);
     }
 
     final url = Uri.parse('$baseUrl/chat/completions');
