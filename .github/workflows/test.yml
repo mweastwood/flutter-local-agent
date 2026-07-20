@@ -61,4 +61,4 @@ jobs:
         working-directory: ./example/android
         run: |
           chmod +x gradlew
-          ./gradlew :local_agent:testDebugUnitTest
+          ./gradlew :flutter_agent_core:testDebugUnitTest
