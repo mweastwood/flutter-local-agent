@@ -584,6 +584,58 @@ void main() {
       // Brackets/braces characters inside JSON string
       expect(repairJson('{"test": "}"}'), equals('{"test": "}"}'));
     });
+
+    group('CloudModelDatabase & RateLimiter Tests', () {
+      test('CloudModelDatabase contains expected models', () {
+        expect(CloudModelDatabase.geminiModels, isNotEmpty);
+        expect(CloudModelDatabase.zhipuModels, isNotEmpty);
+        expect(CloudModelDatabase.getModelInfo('gemini-3.5-flash'), isNotNull);
+        expect(CloudModelDatabase.getModelInfo('glm-4.7-flash'), isNotNull);
+        expect(CloudModelDatabase.getModelInfo('non-existent-model'), isNull);
+      });
+
+      test('RateLimiter enforces Request-Per-Second (RPS) limits', () async {
+        final mockInfo = CloudModelInfo(
+          modelName: 'test-rps-model',
+          providerName: 'test-provider',
+          limitRps: 10,
+          description: 'Test limit',
+        );
+
+        final limiter = RateLimiter(
+          modelInfo: mockInfo,
+          throttlePercentage: 100.0,
+        );
+
+        final stopwatch = Stopwatch()..start();
+        await limiter.throttleBeforeRequest(10);
+        await limiter.throttleBeforeRequest(10);
+        stopwatch.stop();
+
+        expect(stopwatch.elapsedMilliseconds, greaterThanOrEqualTo(90));
+      });
+
+      test('RateLimiter honors throttlePercentage setting', () async {
+        final mockInfo = CloudModelInfo(
+          modelName: 'test-rps-model-pct',
+          providerName: 'test-provider',
+          limitRps: 10,
+          description: 'Test limit',
+        );
+
+        final limiter = RateLimiter(
+          modelInfo: mockInfo,
+          throttlePercentage: 50.0,
+        );
+
+        final stopwatch = Stopwatch()..start();
+        await limiter.throttleBeforeRequest(10);
+        await limiter.throttleBeforeRequest(10);
+        stopwatch.stop();
+
+        expect(stopwatch.elapsedMilliseconds, greaterThanOrEqualTo(190));
+      });
+    });
   });
 }
 
