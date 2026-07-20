@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_agent_core/flutter_agent_core.dart';
+import 'package:http/http.dart' as http;
 
 class TestMockAiService extends AiService {
   final List<Map<String, dynamic>> responses;
@@ -301,6 +302,88 @@ void main() {
     );
   });
 
+  group('CloudAiService Tests', () {
+    test(
+      'sends request and parses OpenAI-compatible response correctly',
+      () async {
+        final mockClient = MockHttpClient((request) async {
+          expect(
+            request.url.toString(),
+            equals('https://api.gemini.com/v1/chat/completions'),
+          );
+          expect(request.headers['Authorization'], equals('Bearer test-key'));
+
+          final bodyString = await request.finalize().bytesToString();
+          final bodyData = jsonDecode(bodyString);
+          expect(bodyData['model'], equals('gemini-1.5-flash'));
+          expect(bodyData['messages'][0]['content'], equals('hello world'));
+
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'role': 'assistant', 'content': 'hi there'},
+                  'finish_reason': 'stop',
+                },
+              ],
+            }),
+            200,
+          );
+        });
+
+        final service = CloudAiService(
+          baseUrl: 'https://api.gemini.com/v1',
+          apiKey: 'test-key',
+          modelName: 'gemini-1.5-flash',
+          httpClient: mockClient,
+        );
+
+        final response = await service.generateContentRaw(
+          prompt: 'hello world',
+        );
+        expect(response?.text, equals('hi there'));
+        expect(response?.isTruncated, isFalse);
+      },
+    );
+
+    test('correctly detects truncation if finish_reason is length', () async {
+      final mockClient = MockHttpClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'role': 'assistant', 'content': 'partial response'},
+                'finish_reason': 'length',
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final service = CloudAiService(
+        baseUrl: 'https://api.gemini.com/v1',
+        apiKey: 'test-key',
+        modelName: 'gemini-1.5-flash',
+        httpClient: mockClient,
+      );
+
+      final response = await service.generateContentRaw(prompt: 'hello world');
+      expect(response?.text, equals('partial response'));
+      expect(response?.isTruncated, isTrue);
+    });
+
+    test('countTokens calculates local estimate', () async {
+      final service = CloudAiService(
+        baseUrl: 'https://api.gemini.com/v1',
+        apiKey: 'test-key',
+        modelName: 'gemini-1.5-flash',
+      );
+      final count = await service.countTokens(prompt: 'hello world');
+      expect(count, equals(3));
+    });
+  });
+
   group('Heuristic & Chunk Cleaning Tests', () {
     test('isTruncatedHeuristic native override', () {
       expect(isTruncatedHeuristic('{}', true), isTrue);
@@ -516,5 +599,23 @@ class _HeuristicMockAiService extends AiService {
       count += 256;
     }
     return count;
+  }
+}
+
+class MockHttpClient extends http.BaseClient {
+  final Future<http.Response> Function(http.BaseRequest request) sendHandler;
+  MockHttpClient(this.sendHandler);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final response = await sendHandler(request);
+    final bodyBytes = response.bodyBytes;
+    return http.StreamedResponse(
+      Stream.value(bodyBytes),
+      response.statusCode,
+      headers: response.headers,
+      contentLength: bodyBytes.length,
+      request: request,
+    );
   }
 }
