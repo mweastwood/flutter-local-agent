@@ -3,6 +3,7 @@ enum CloudProvider { gemini, zhipu }
 class CloudModelInfo {
   final String modelName;
   final CloudProvider provider;
+  final bool isVision;
   final int? limitRpm;
   final int? limitTpm;
   final int? limitRpd;
@@ -12,6 +13,7 @@ class CloudModelInfo {
   const CloudModelInfo({
     required this.modelName,
     required this.provider,
+    this.isVision = false,
     this.limitRpm,
     this.limitTpm,
     this.limitRpd,
@@ -25,6 +27,7 @@ class CloudModelDatabase {
     CloudModelInfo(
       modelName: 'gemini-3.5-flash',
       provider: CloudProvider.gemini,
+      isVision: true,
       limitRpm: 15,
       limitTpm: 1000000,
       limitRpd: 1500,
@@ -33,6 +36,7 @@ class CloudModelDatabase {
     CloudModelInfo(
       modelName: 'gemini-3.1-pro',
       provider: CloudProvider.gemini,
+      isVision: true,
       limitRpm: 2,
       limitTpm: 32000,
       limitRpd: 50,
@@ -41,6 +45,7 @@ class CloudModelDatabase {
     CloudModelInfo(
       modelName: 'gemini-3-flash',
       provider: CloudProvider.gemini,
+      isVision: true,
       limitRpm: 15,
       limitTpm: 1000000,
       limitRpd: 1500,
@@ -49,6 +54,7 @@ class CloudModelDatabase {
     CloudModelInfo(
       modelName: 'gemini-3.1-flash-lite',
       provider: CloudProvider.gemini,
+      isVision: true,
       limitRpm: 15,
       limitTpm: 1000000,
       limitRpd: 1500,
@@ -57,6 +63,7 @@ class CloudModelDatabase {
     CloudModelInfo(
       modelName: 'gemini-2.5-pro',
       provider: CloudProvider.gemini,
+      isVision: true,
       limitRpm: 2,
       limitTpm: 32000,
       limitRpd: 50,
@@ -65,6 +72,7 @@ class CloudModelDatabase {
     CloudModelInfo(
       modelName: 'gemini-2.5-flash',
       provider: CloudProvider.gemini,
+      isVision: true,
       limitRpm: 15,
       limitTpm: 1000000,
       limitRpd: 1500,
@@ -76,30 +84,42 @@ class CloudModelDatabase {
     CloudModelInfo(
       modelName: 'glm-5.2',
       provider: CloudProvider.zhipu,
+      isVision: false,
       limitRps: 2,
       description: 'Commercial: 2 RPS (Approx. \$1.40 / 1M input tokens)',
     ),
     CloudModelInfo(
       modelName: 'glm-5v-turbo',
       provider: CloudProvider.zhipu,
+      isVision: true,
       limitRps: 2,
       description: 'Commercial: 2 RPS (Flagship Vision Model)',
     ),
     CloudModelInfo(
+      modelName: 'glm-4v-flash',
+      provider: CloudProvider.zhipu,
+      isVision: true,
+      limitRps: 2,
+      description: 'Free Tier Limits: 2 RPS (Zero cost vision model)',
+    ),
+    CloudModelInfo(
       modelName: 'glm-4.7-flash',
       provider: CloudProvider.zhipu,
+      isVision: false,
       limitRps: 2,
       description: 'Free Tier Limits: 2 RPS (zero cost, completely free)',
     ),
     CloudModelInfo(
       modelName: 'glm-4.7',
       provider: CloudProvider.zhipu,
+      isVision: false,
       limitRps: 2,
       description: 'Commercial: 2 RPS (Standard capability)',
     ),
     CloudModelInfo(
       modelName: 'glm-4.5-air',
       provider: CloudProvider.zhipu,
+      isVision: false,
       limitRps: 2,
       description: 'Commercial: 2 RPS (Light, balanced)',
     ),
@@ -110,18 +130,33 @@ class CloudModelDatabase {
       model.modelName: model,
   };
 
-  /// Query which models are available, optionally filtering by provider (gemini or zhipu).
-  static List<CloudModelInfo> getAvailableModels({CloudProvider? provider}) {
-    if (provider == CloudProvider.gemini) return geminiModels;
-    if (provider == CloudProvider.zhipu) return zhipuModels;
-    if (provider != null) return [];
-    return [...geminiModels, ...zhipuModels];
+  /// Query which models are available, optionally filtering by provider and vision support.
+  static List<CloudModelInfo> getAvailableModels({
+    CloudProvider? provider,
+    bool? isVision,
+  }) {
+    Iterable<CloudModelInfo> list;
+    if (provider == CloudProvider.gemini) {
+      list = geminiModels;
+    } else if (provider == CloudProvider.zhipu) {
+      list = zhipuModels;
+    } else {
+      list = [...geminiModels, ...zhipuModels];
+    }
+    if (isVision != null) {
+      list = list.where((m) => m.isVision == isVision);
+    }
+    return list.toList();
   }
 
-  /// Query the model names of all available models, optionally filtering by provider.
-  static List<String> getAvailableModelNames({CloudProvider? provider}) {
+  /// Query model names, optionally filtering by provider and vision support.
+  static List<String> getAvailableModelNames({
+    CloudProvider? provider,
+    bool? isVision,
+  }) {
     return getAvailableModels(
       provider: provider,
+      isVision: isVision,
     ).map((m) => m.modelName).toList();
   }
 
