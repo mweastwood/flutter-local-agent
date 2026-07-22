@@ -43,10 +43,32 @@ void main() {
       final info = CloudModelDatabase.getModelInfo('gemini-3.5-flash');
       expect(info, isNotNull);
       expect(info!.provider, equals(CloudProvider.gemini));
+      expect(info.isVision, isTrue);
       expect(info.limitRpm, equals(15));
+
+      final zhipuText = CloudModelDatabase.getModelInfo('glm-4.7-flash');
+      expect(zhipuText, isNotNull);
+      expect(zhipuText!.isVision, isFalse);
 
       final nonExistent = CloudModelDatabase.getModelInfo('some-fake-model');
       expect(nonExistent, isNull);
+    });
+
+    test('CloudModelDatabase supports filtering by isVision', () {
+      final visionModels = CloudModelDatabase.getAvailableModels(
+        isVision: true,
+      );
+      expect(visionModels.every((m) => m.isVision), isTrue);
+      expect(visionModels.any((m) => m.modelName == 'glm-4v-flash'), isTrue);
+      expect(visionModels.any((m) => m.modelName == 'glm-4.7-flash'), isFalse);
+
+      final zhipuVisionNames = CloudModelDatabase.getAvailableModelNames(
+        provider: CloudProvider.zhipu,
+        isVision: true,
+      );
+      expect(zhipuVisionNames, contains('glm-4v-flash'));
+      expect(zhipuVisionNames, contains('glm-5v-turbo'));
+      expect(zhipuVisionNames, isNot(contains('glm-4.7-flash')));
     });
   });
 }
