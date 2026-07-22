@@ -25,6 +25,15 @@ class CloudModelInfo {
 class CloudModelDatabase {
   static const List<CloudModelInfo> geminiModels = [
     CloudModelInfo(
+      modelName: 'gemini-3.6-flash',
+      provider: CloudProvider.gemini,
+      isVision: true,
+      limitRpm: 5,
+      limitTpm: 250000,
+      limitRpd: 20,
+      description: 'Free Tier Limits: 5 RPM / 250k TPM / 20 RPD',
+    ),
+    CloudModelInfo(
       modelName: 'gemini-3.5-flash',
       provider: CloudProvider.gemini,
       isVision: true,
@@ -32,6 +41,15 @@ class CloudModelDatabase {
       limitTpm: 250000,
       limitRpd: 20,
       description: 'Free Tier Limits: 5 RPM / 250k TPM / 20 RPD',
+    ),
+    CloudModelInfo(
+      modelName: 'gemini-3.5-flash-lite',
+      provider: CloudProvider.gemini,
+      isVision: true,
+      limitRpm: 15,
+      limitTpm: 250000,
+      limitRpd: 500,
+      description: 'Free Tier Limits: 15 RPM / 250k TPM / 500 RPD',
     ),
     CloudModelInfo(
       modelName: 'gemini-3.1-pro',
