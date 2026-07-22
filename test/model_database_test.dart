@@ -46,12 +46,16 @@ void main() {
       expect(info36.isVision, isTrue);
       expect(info36.limitRpm, equals(5));
 
-      final info35Lite = CloudModelDatabase.getModelInfo('gemini-3.5-flash-lite');
+      final info35Lite = CloudModelDatabase.getModelInfo(
+        'gemini-3.5-flash-lite',
+      );
       expect(info35Lite, isNotNull);
       expect(info35Lite!.limitRpm, equals(15));
       expect(info35Lite.limitRpd, equals(500));
 
-      final flashLite = CloudModelDatabase.getModelInfo('gemini-3.1-flash-lite');
+      final flashLite = CloudModelDatabase.getModelInfo(
+        'gemini-3.1-flash-lite',
+      );
       expect(flashLite, isNotNull);
       expect(flashLite!.limitRpm, equals(15));
       expect(flashLite.limitRpd, equals(500));
