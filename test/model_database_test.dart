@@ -44,7 +44,13 @@ void main() {
       expect(info, isNotNull);
       expect(info!.provider, equals(CloudProvider.gemini));
       expect(info.isVision, isTrue);
-      expect(info.limitRpm, equals(15));
+      expect(info.limitRpm, equals(5));
+      expect(info.limitRpd, equals(20));
+
+      final flashLite = CloudModelDatabase.getModelInfo('gemini-3.1-flash-lite');
+      expect(flashLite, isNotNull);
+      expect(flashLite!.limitRpm, equals(15));
+      expect(flashLite.limitRpd, equals(500));
 
       final zhipuText = CloudModelDatabase.getModelInfo('glm-4.7-flash');
       expect(zhipuText, isNotNull);
