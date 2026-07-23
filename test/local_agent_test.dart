@@ -346,6 +346,42 @@ void main() {
       },
     );
 
+    test(
+      'sanitizes non-ASCII code points and whitespace from apiKey in Authorization header',
+      () async {
+        final mockClient = MockHttpClient((request) async {
+          expect(
+            request.headers['Authorization'],
+            equals('Bearer test-clean-key'),
+          );
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'role': 'assistant', 'content': 'ok'},
+                  'finish_reason': 'stop',
+                },
+              ],
+            }),
+            200,
+          );
+        });
+
+        // Key contains zero-width spaces (\u200B), non-breaking space, curly quotes, and leading/trailing whitespace
+        final service = CloudAiService(
+          baseUrl: 'https://api.gemini.com/v1',
+          apiKey: ' \u200B“test-clean-key”\u200B ',
+          modelName: 'gemini-1.5-flash',
+          httpClient: mockClient,
+        );
+
+        final response = await service.generateContentRaw(
+          prompt: 'hello world',
+        );
+        expect(response?.text, equals('ok'));
+      },
+    );
+
     test('correctly detects truncation if finish_reason is length', () async {
       final mockClient = MockHttpClient((request) async {
         return http.Response(
