@@ -93,9 +93,10 @@ class CloudAiService extends AiService {
       messages.add({'role': 'user', 'content': prompt});
     }
 
+    final cleanApiKey = apiKey.replaceAll(RegExp(r'[^\x00-\x7F]'), '').trim();
     final headers = {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $apiKey',
+      'Authorization': 'Bearer $cleanApiKey',
     };
 
     final body = jsonEncode({
