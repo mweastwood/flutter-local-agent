@@ -663,8 +663,8 @@ void main() {
       expect(res.inputTokens, equals(100));
       expect(res.outputTokens, equals(20));
       expect(res.totalTokens, equals(120));
-      // gemini-3.6-flash: 100/1M * 0.075 + 20/1M * 0.30 = 0.0000075 + 0.000006 = 0.0000135
-      expect(res.estimatedCostUsd, closeTo(0.0000135, 0.0000001));
+      // gemini-3.6-flash: 100/1M * 1.50 + 20/1M * 7.50 = 0.00015 + 0.00015 = 0.00030
+      expect(res.estimatedCostUsd, closeTo(0.0003, 0.0000001));
     });
 
     test('repairJson structural balancing', () {
