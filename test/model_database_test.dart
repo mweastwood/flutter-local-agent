@@ -87,5 +87,39 @@ void main() {
       expect(zhipuVisionNames, contains('glm-5v-turbo'));
       expect(zhipuVisionNames, isNot(contains('glm-4.7-flash')));
     });
+
+    test('CloudModelDatabase calculateEstimatedCost calculates USD costs correctly', () {
+      // gemini-3.6-flash: $0.075 / 1M input, $0.30 / 1M output
+      final costFlash = CloudModelDatabase.calculateEstimatedCost(
+        'gemini-3.6-flash',
+        inputTokens: 1000000,
+        outputTokens: 1000000,
+      );
+      expect(costFlash, closeTo(0.375, 0.0001));
+
+      // gemini-3.1-pro: $1.25 / 1M input, $5.00 / 1M output
+      final costPro = CloudModelDatabase.calculateEstimatedCost(
+        'gemini-3.1-pro',
+        inputTokens: 2000000,
+        outputTokens: 500000,
+      );
+      expect(costPro, closeTo(2.50 + 2.50, 0.0001));
+
+      // Free tier gemma model: $0.0
+      final costFree = CloudModelDatabase.calculateEstimatedCost(
+        'gemma-4-31b-it',
+        inputTokens: 500000,
+        outputTokens: 100000,
+      );
+      expect(costFree, equals(0.0));
+
+      // Unknown model returns 0.0
+      final costUnknown = CloudModelDatabase.calculateEstimatedCost(
+        'unknown-model',
+        inputTokens: 1000,
+        outputTokens: 1000,
+      );
+      expect(costUnknown, equals(0.0));
+    });
   });
 }
