@@ -118,6 +118,7 @@ class AgentHistoryEntry {
   final bool isError;
   final Uint8List? imageBytes;
   final String imageMimeType;
+  final String? modelName;
 
   AgentHistoryEntry({
     required this.timestamp,
@@ -126,6 +127,7 @@ class AgentHistoryEntry {
     required this.isError,
     this.imageBytes,
     this.imageMimeType = 'image/bmp',
+    this.modelName,
   });
 
   Map<String, dynamic> toJson() {
@@ -134,6 +136,7 @@ class AgentHistoryEntry {
       'prompt': prompt,
       'response': response,
       'isError': isError,
+      if (modelName != null) 'modelName': modelName,
       if (imageBytes != null)
         'image': {
           'mimeType': imageMimeType,
@@ -149,6 +152,7 @@ class AgentHistoryEntry {
       prompt: json['prompt'] as String,
       response: json['response'] as String,
       isError: json['isError'] as bool? ?? false,
+      modelName: json['modelName'] as String?,
       imageBytes: imageMap != null
           ? base64Decode(imageMap['base64'] as String)
           : null,

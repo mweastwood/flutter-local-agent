@@ -60,9 +60,12 @@ void main() {
       expect(flashLite!.limitRpm, equals(15));
       expect(flashLite.limitRpd, equals(500));
 
-      final zhipuText = CloudModelDatabase.getModelInfo('glm-4.7-flash');
-      expect(zhipuText, isNotNull);
-      expect(zhipuText!.isVision, isFalse);
+      final gemma31b = CloudModelDatabase.getModelInfo('gemma-4-31b-it');
+      expect(gemma31b, isNotNull);
+      expect(gemma31b!.provider, equals(CloudProvider.gemini));
+      expect(gemma31b.isVision, isTrue);
+      expect(gemma31b.limitRpm, equals(15));
+      expect(gemma31b.limitRpd, equals(1500));
 
       final nonExistent = CloudModelDatabase.getModelInfo('some-fake-model');
       expect(nonExistent, isNull);
